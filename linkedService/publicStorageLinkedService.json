@@ -1,0 +1,14 @@
+{
+	"name": "publicStorageLinkedService",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobStorage",
+		"typeProperties": {
+			"sasUri": {
+				"type": "SecureString",
+				"value": "**********"
+			}
+		}
+	}
+}

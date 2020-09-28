@@ -1,0 +1,22 @@
+{
+	"name": "DhcOutputDatasetSink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "customerStorageLinkedService",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "CovidDefinitiveHC/Sinks"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "definitiveHealthCare",
+				"container": "receivedcopy"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

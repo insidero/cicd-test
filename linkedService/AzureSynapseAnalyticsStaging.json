@@ -1,0 +1,12 @@
+{
+	"name": "AzureSynapseAnalyticsStaging",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDW",
+		"typeProperties": {
+			"connectionString": "integrated security=False;encrypt=True;connection timeout=30;data source=democustomerdbserverqvfarwtxqt7is.database.windows.net;initial catalog=democustomerdw;user id=masteruser",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRFTU9DVVNUT01FUkFERlFWRkFSV1RYUVQ3SVNfOGY5OGEwMmMtYmFjNC00YWJlLThlMDAtMTgyM2MyYTEyM2YwIg0KfQ=="
+		}
+	}
+}

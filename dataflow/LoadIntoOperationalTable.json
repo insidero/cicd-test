@@ -1,0 +1,31 @@
+{
+	"name": "LoadIntoOperationalTable",
+	"properties": {
+		"folder": {
+			"name": "CovidDefinitiveHC"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "AzureSynapseAnalyticsStagingTableSource",
+						"type": "DatasetReference"
+					},
+					"name": "sourceSynapseStagingTable"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SynapseOperationalTable_sink",
+						"type": "DatasetReference"
+					},
+					"name": "SynapseOperationalTable"
+				}
+			],
+			"transformations": [],
+			"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tinferDriftedColumnTypes: true,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tstaged: false) ~> sourceSynapseStagingTable\nsourceSynapseStagingTable sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\tformat: 'table',\n\tstaged: true,\n\tpostSQLs:['\\n'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SynapseOperationalTable"
+		}
+	}
+}

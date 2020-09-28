@@ -1,0 +1,22 @@
+{
+	"name": "DhcInputDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "publicStorageLinkedService",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "CovidDefinitiveHC/Sources"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "curated/covid-19/covid_definitiveHC/latest",
+				"container": "public"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
