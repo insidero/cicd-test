@@ -1,4 +1,4 @@
-# Basic YAML pipeline for Azure Data Factory
+# Basic YAML pipeline for Azure Data Factory by Alex Volok
 
 
 # Batching trigger set run only on a adf_publish branch
@@ -17,7 +17,8 @@ trigger:
       - "*"
 
 
-# Link the variable group to read the variables from:
+# Adjust variables, set a dummy product name, environment and a name of the subscription
+variables:
 - group: stg-variables
 
 
@@ -36,7 +37,7 @@ steps:
   path: src
 
 
-# Step 2a: Find arm JSON files for deployment of a blank ADF in src and copy them into the artifact staging folder
+# Step 2a: Find arm json files for a deployment of blank adf in a src and copy them into the artifact staging folder
 - task: CopyFiles@2  
   inputs:
     SourceFolder: '$(Pipeline.Workspace)\src\resources\arm\blank-adf'
@@ -47,7 +48,7 @@ steps:
   displayName: 'Extra ARM - Blank ADF Service'
   enabled: true
 
-# Step 2b: Find other ADF files, which will deploy pipelines, datasets and so on  in a folder adf_publish and copy them into the artifact folder
+# Step 2b: Find other adf files, which will deploy pipelines, datasets and so on  in a folder adf_publish and copy them into the artifact folder
 - task: CopyFiles@2  
   inputs:
     SourceFolder: '$(Pipeline.Workspace)\src'
@@ -72,10 +73,10 @@ steps:
 - task: AzureResourceManagerTemplateDeployment@3
   inputs:
     deploymentScope: 'Resource Group'
-    azureResourceManagerConnection: ''
-    subscriptionId: ''
+    azureResourceManagerConnection: 'Azure subscription 1(80ebef40-3f7f-4972-b829-72efcd567faf)'
+    subscriptionId: '80ebef40-3f7f-4972-b829-72efcd567faf'
     action: 'Create Or Update Resource Group'
-    resourceGroupName: '$(dataFactoryName)'
+    resourceGroupName: 'rg-$(ProductName)-$(Environment)'
     location: 'West Europe'
     templateLocation: 'Linked artifact'
     csmFile: '$(build.artifactstagingdirectory)\arm\template.json'
@@ -85,14 +86,15 @@ steps:
   displayName: Deploy ADF Service
   enabled: true
 
+
 # Step 5: Deploy Azure Data Factory Objects like pipelines, dataflows using ARM templates that ADF generate during each publish event
 - task: AzureResourceManagerTemplateDeployment@3
   inputs:
     deploymentScope: 'Resource Group'
-    azureResourceManagerConnection: ''
-    subscriptionId: ''
+    azureResourceManagerConnection: 'Azure subscription 1(80ebef40-3f7f-4972-b829-72efcd567faf)'
+    subscriptionId: '80ebef40-3f7f-4972-b829-72efcd567faf'
     action: 'Create Or Update Resource Group'
-    resourceGroupName: '$(dataFactoryName)'
+    resourceGroupName: 'rg-$(ProductName)-$(Environment)'
     location: 'West Europe'
     templateLocation: 'Linked artifact'
     csmFile: '$(build.artifactstagingdirectory)\adf_publish\ARMTemplateForFactory.json'
