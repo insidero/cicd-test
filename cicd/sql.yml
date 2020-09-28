@@ -85,7 +85,6 @@ steps:
   displayName: Deploy ADF Service
   enabled: true
 
-
 # Step 5: Deploy Azure Data Factory Objects like pipelines, dataflows using ARM templates that ADF generate during each publish event
 - task: AzureResourceManagerTemplateDeployment@3
   inputs:
