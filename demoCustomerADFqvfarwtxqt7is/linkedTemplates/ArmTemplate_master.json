@@ -1,0 +1,70 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "demoCustomerADFqvfarwtxqt7is"
+		},
+		"AzureSynapseAnalyticsStaging_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSynapseAnalyticsStaging'"
+		},
+		"AzureSynapseOperational_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSynapseOperational'"
+		},
+		"customerStorageLinkedService_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'customerStorageLinkedService'"
+		},
+		"publicStorageLinkedService_sasUri": {
+			"type": "secureString",
+			"metadata": "Secure string for 'sasUri' of 'publicStorageLinkedService'"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "demoCustomerADFqvfarwtxqt7is_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"AzureSynapseAnalyticsStaging_connectionString": {
+						"value": "[parameters('AzureSynapseAnalyticsStaging_connectionString')]"
+					},
+					"AzureSynapseOperational_connectionString": {
+						"value": "[parameters('AzureSynapseOperational_connectionString')]"
+					},
+					"customerStorageLinkedService_connectionString": {
+						"value": "[parameters('customerStorageLinkedService_connectionString')]"
+					},
+					"publicStorageLinkedService_sasUri": {
+						"value": "[parameters('publicStorageLinkedService_sasUri')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

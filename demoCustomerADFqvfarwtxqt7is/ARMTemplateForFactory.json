@@ -1,0 +1,568 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "demoCustomerADFqvfarwtxqt7is"
+		},
+		"AzureSynapseAnalyticsStaging_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSynapseAnalyticsStaging'"
+		},
+		"AzureSynapseOperational_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSynapseOperational'"
+		},
+		"customerStorageLinkedService_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'customerStorageLinkedService'"
+		},
+		"publicStorageLinkedService_sasUri": {
+			"type": "secureString",
+			"metadata": "Secure string for 'sasUri' of 'publicStorageLinkedService'"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/SynapseDataLoader')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy latest data",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "BinarySource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true
+								},
+								"formatSettings": {
+									"type": "BinaryReadSettings"
+								}
+							},
+							"sink": {
+								"type": "BinarySink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "DhcInputDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DhcOutputDatasetSink",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Verify Master Key",
+						"description": "e,fmnfgjsnfk",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Copy latest data",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderQuery": "IF (select Count(*) from sys.symmetric_keys where name like '%DatabaseMasterKey%') = 0\n\nBEGIN\n\nCREATE master key;\n\nIF NOT EXISTS ( SELECT  * FROM sys.schemas WHERE name = N'definitive_HC' )\n\n    EXEC('CREATE SCHEMA [definitive_HC] AUTHORIZATION [dbo]');\nselect Count(*) from sys.symmetric_keys;\n\nEND\n\nELSE \n\nBEGIN\nIF NOT EXISTS ( SELECT  * FROM sys.schemas WHERE name = N'definitive_HC' )\n\n    EXEC('CREATE SCHEMA [definitive_HC] AUTHORIZATION [dbo]');\n\nselect Count(*) from sys.symmetric_keys;\n\nEND\n",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSynapseAnalyticsStagingTableSource",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "LoadIntoStagingTable",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "Verify Master Key",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "LoadIntoStagingTable",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"SourceCSV": {},
+									"SynapseStagingSink": {}
+								}
+							},
+							"staging": {
+								"linkedService": {
+									"referenceName": "customerStorageLinkedService",
+									"type": "LinkedServiceReference"
+								},
+								"folderPath": "receivedcopy"
+							},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							}
+						}
+					},
+					{
+						"name": "LoadIntoOperationalTable",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "LoadIntoStagingTable",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 3,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "LoadIntoOperationalTable",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"sourceSynapseStagingTable": {},
+									"SynapseOperationalTable": {}
+								}
+							},
+							"staging": {
+								"linkedService": {
+									"referenceName": "customerStorageLinkedService",
+									"type": "LinkedServiceReference"
+								},
+								"folderPath": "receivedcopy"
+							},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							}
+						}
+					},
+					{
+						"name": "Create Views in Synapse",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "LoadIntoOperationalTable",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderQuery": "IF EXISTS ( SELECT  * FROM sys.schemas WHERE name = N'definitive_HC') \n\nBEGIN\nIF NOT EXISTS (select * from sys.views where name = N'dhc_view')\n    EXEC('create view definitive_HC.dhc_view as select Hospital_Type, Hq_State, Hq_Zip_Code, County_Name, State_Name, Num_Licensed_Beds, Num_Staffed_Beds, Num_Icu_Beds, Adult_Icu_Beds, Pedi_Icu_Beds, Bed_Utilization, Potential_Increase_In_Bed_Capac, Avg_Ventilator_Usage from definitive_HC.operationaldhc;')\nselect Count(*) from sys.symmetric_keys;\n\nEND\n\nELSE \n\nBEGIN\n\nselect Count(*) from sys.symmetric_keys;\n\nEND",
+								"queryTimeout": "00:10:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "SynapseOperationalTable_sink",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					}
+				],
+				"folder": {
+					"name": "CovidDefinitiveHC"
+				},
+				"annotations": [],
+				"lastPublishTime": "2020-09-28T06:28:59Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/DhcInputDataset')]",
+				"[concat(variables('factoryId'), '/datasets/DhcOutputDatasetSink')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSynapseAnalyticsStagingTableSource')]",
+				"[concat(variables('factoryId'), '/dataflows/LoadIntoStagingTable')]",
+				"[concat(variables('factoryId'), '/linkedServices/customerStorageLinkedService')]",
+				"[concat(variables('factoryId'), '/dataflows/LoadIntoOperationalTable')]",
+				"[concat(variables('factoryId'), '/datasets/SynapseOperationalTable_sink')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSynapseAnalyticsStagingTableSink')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalyticsStaging",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "CovidDefinitiveHC/Sinks"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "definitive_HC",
+					"table": "stagingdhc"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSynapseAnalyticsStaging')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSynapseAnalyticsStagingTableSource')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseAnalyticsStaging",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "CovidDefinitiveHC/Sources"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "definitive_HC",
+					"table": "stagingdhc"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSynapseAnalyticsStaging')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DhcInputDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "publicStorageLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "CovidDefinitiveHC/Sources"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"folderPath": "curated/covid-19/covid_definitiveHC/latest",
+						"container": "public"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/publicStorageLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DhcOutputDatasetSink')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "customerStorageLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "CovidDefinitiveHC/Sinks"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"folderPath": "definitiveHealthCare",
+						"container": "receivedcopy"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/customerStorageLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DhcOutputDatasetSource')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "customerStorageLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "CovidDefinitiveHC/Sources"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "covid_tracking.csv",
+						"folderPath": "definitiveHealthCare",
+						"container": "receivedcopy"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/customerStorageLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SynapseOperationalTable_sink')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSynapseOperational",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "CovidDefinitiveHC/Sinks"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "definitive_HC",
+					"table": "operationaldhc"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSynapseOperational')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSynapseAnalyticsStaging')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSynapseAnalyticsStaging_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSynapseOperational')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSynapseOperational_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/customerStorageLinkedService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('customerStorageLinkedService_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/publicStorageLinkedService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"sasUri": "[parameters('publicStorageLinkedService_sasUri')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SynapseDataLoaderPipelineTrigger')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "SynapseDataLoader",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 24,
+						"startTime": "2020-09-28 06:28:44Z",
+						"timeZone": "UTC"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/SynapseDataLoader')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LoadIntoOperationalTable')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "CovidDefinitiveHC"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "AzureSynapseAnalyticsStagingTableSource",
+								"type": "DatasetReference"
+							},
+							"name": "sourceSynapseStagingTable"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "SynapseOperationalTable_sink",
+								"type": "DatasetReference"
+							},
+							"name": "SynapseOperationalTable"
+						}
+					],
+					"transformations": [],
+					"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tinferDriftedColumnTypes: true,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tstaged: false) ~> sourceSynapseStagingTable\nsourceSynapseStagingTable sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\tformat: 'table',\n\tstaged: true,\n\tpostSQLs:['\\n'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SynapseOperationalTable"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSynapseAnalyticsStagingTableSource')]",
+				"[concat(variables('factoryId'), '/datasets/SynapseOperationalTable_sink')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LoadIntoStagingTable')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "CovidDefinitiveHC"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "DhcOutputDatasetSource",
+								"type": "DatasetReference"
+							},
+							"name": "SourceCSV"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSynapseAnalyticsStagingTableSink",
+								"type": "DatasetReference"
+							},
+							"name": "SynapseStagingSink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "CleanData"
+						}
+					],
+					"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\trowUrlColumn: 'filename',\n\tinferDriftedColumnTypes: true) ~> SourceCSV\nSourceCSV derive(each(match(type=='string'), $$ = trim(toString($$))),\n\t\teach(match(type=='integer'), $$ = toInteger($$)),\n\t\teach(match(type=='short'), $$ = toShort($$)),\n\t\teach(match(type=='double'), $$ = round(toDouble($$),3)),\n\t\teach(match(type=='decimal'), $$ = toDecimal($$))) ~> CleanData\nCleanData sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\trecreate:true,\n\tformat: 'table',\n\tstaged: true,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SynapseStagingSink"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/DhcOutputDatasetSource')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSynapseAnalyticsStagingTableSink')]"
+			]
+		}
+	]
+}
