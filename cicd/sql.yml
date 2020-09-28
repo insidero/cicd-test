@@ -1,5 +1,6 @@
 # Basic YAML pipeline for Azure Data Factory
 
+
 # Batching trigger set run only on a adf_publish branch
 # cicd folder is not watched
 trigger:
