@@ -73,8 +73,8 @@ steps:
 - task: AzureResourceManagerTemplateDeployment@3
   inputs:
     deploymentScope: 'Resource Group'
-    azureResourceManagerConnection: 'Azure subscription 1(6df48df0-802d-4891-9f31-7cc1879f3cb4)'
-    subscriptionId: '6df48df0-802d-4891-9f31-7cc1879f3cb4'
+    azureResourceManagerConnection: ''
+    subscriptionId: ''
     action: 'Create Or Update Resource Group'
     resourceGroupName: 'rg-insidero-datafactory-stg'
     location: 'West Europe'
@@ -87,8 +87,8 @@ steps:
 - task: AzureResourceManagerTemplateDeployment@3
   inputs:
     deploymentScope: 'Resource Group'
-    azureResourceManagerConnection: 'Azure subscription 1(6df48df0-802d-4891-9f31-7cc1879f3cb4)'
-    subscriptionId: '6df48df0-802d-4891-9f31-7cc1879f3cb4'
+    azureResourceManagerConnection: ''
+    subscriptionId: ''
     action: 'Create Or Update Resource Group'
     resourceGroupName: 'rg-insidero-datafactory-stg'
     location: 'West Europe'
