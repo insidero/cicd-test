@@ -71,38 +71,34 @@ steps:
 
 
 # Step 4: Deploy a blank Azure Data Factory instance using ARM templates
+
+
 - task: AzureResourceManagerTemplateDeployment@3
   inputs:
     deploymentScope: 'Resource Group'
-    azureResourceManagerConnection: 'Azure subscription 1(80ebef40-3f7f-4972-b829-72efcd567faf)'
+    azureResourceManagerConnection: 'Azure subscription 1(1)(80ebef40-3f7f-4972-b829-72efcd567faf)'
     subscriptionId: '80ebef40-3f7f-4972-b829-72efcd567faf'
     action: 'Create Or Update Resource Group'
-    resourceGroupName: 'rg-$(ProductName)-$(Environment)'
+    resourceGroupName: 'rg-insidero-datafactory-stg'
     location: 'West Europe'
     templateLocation: 'Linked artifact'
     csmFile: '$(build.artifactstagingdirectory)\arm\template.json'
     csmParametersFile: '$(build.artifactstagingdirectory)\arm\parameters.json'
     overrideParameters: '-name "$(dataFactoryName)"'
     deploymentMode: 'Incremental'
-  displayName: Deploy ADF Service
-  enabled: true
-
-
 # Step 5: Deploy Azure Data Factory Objects like pipelines, dataflows using ARM templates that ADF generate during each publish event
+
 - task: AzureResourceManagerTemplateDeployment@3
   inputs:
     deploymentScope: 'Resource Group'
-    azureResourceManagerConnection: 'Azure subscription 1(80ebef40-3f7f-4972-b829-72efcd567faf)'
+    azureResourceManagerConnection: 'Azure subscription 1(1)(80ebef40-3f7f-4972-b829-72efcd567faf)'
     subscriptionId: '80ebef40-3f7f-4972-b829-72efcd567faf'
     action: 'Create Or Update Resource Group'
-    resourceGroupName: 'rg-$(ProductName)-$(Environment)'
+    resourceGroupName: 'rg-insidero-datafactory-stg'
     location: 'West Europe'
     templateLocation: 'Linked artifact'
     csmFile: '$(build.artifactstagingdirectory)\adf_publish\ARMTemplateForFactory.json'
     csmParametersFile: '$(build.artifactstagingdirectory)\adf_publish\ARMTemplateParametersForFactory.json'
-    overrideParameters: '-factoryName "$(dataFactoryName)" -AzureSynapseAnalyticsStaging_connectionString "$(synapse-conn-string)" -AzureSynapseOperational_connectionString "$(synapse-conn-string)" -customerStorageLinkedService_connectionString "$(customer-sa-conn-string)" -publicStorageLinkedService_sasUri "$(public-sa-sas-uri)" '
+    overrideParameters: '-factoryName "$(dataFactoryName)" '
     deploymentMode: 'Incremental'
-  displayName: Deploy ADF Pipelines
-  enabled: true
-
 
